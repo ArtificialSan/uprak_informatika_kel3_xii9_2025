@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Panel</title>
+    <style>
+        body {
+            font-family: 'Helvetica', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #F6F6F6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: height 0.3s ease;
+        }
+
+        .form-body {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Style for the "Open & Close" toggle */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #62BE63;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .status-text {
+            font-family: 'Helvetica', sans-serif;
+            font-size: 18px;
+            display: flex;
+            margin-left: 8px;
+            align-items: center;
+        }
+
+        .hidden-content {
+            display: none;
+            padding: 20px;
+            flex-direction: column;
+            gap: 15px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .hidden-content.active {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .color-swatch {
+            width: 45px;
+            height: 45px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .color-swatch.selected {
+            border: 2px solid #1987FF;
+        }
+
+        .checkbox-group input {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+        }
+
+        .textarea {
+            resize: none;
+            width: 87%;
+            height: 50px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-family: 'Helvetica', sans-serif;
+            input-mode: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .textarea-warning {
+            color: red;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .edit-button {
+            background-color: #1987FF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .button-container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 5px auto;
+            background: transparent;
+            border-radius: 4px;
+            overflow: hidden;
+            transition: height 0.3s ease;
+        }
+
+        .edit-button:hover {
+            background-color: #156fbc;
+        }
+
+        .time-input {
+            width: 90%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-family: 'Helvetica', sans-serif;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Optional spacing between the checkbox and label text */
+            margin-top: 8px; /* Adds vertical spacing between labels */
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group input {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            margin-top: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            vertical-align: middle; /* Align checkbox vertically */
+            margin-bottom: 2px;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .swipe-orientation-label {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 10px;
+        }
+
+        /* Style for the "Swipe Orientation" toggle (square) */
+        .swipe-orientation-toggle {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 26px;
+            flex-shrink: 0;
+            margin-left: 5%;
+            margin-right: 10%;
+        }
+
+        .swipe-orientation-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .swipe-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ecec69; /* light yellow */
+            transition: .4s;
+            border-radius: 4px;
+        }
+
+        .swipe-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 4px;
+        }
+
+        .swipe-orientation-toggle input:checked + .swipe-slider {
+            background-color: lightblue;
+        }
+
+        .swipe-orientation-toggle input:checked + .swipe-slider:before {
+            transform: translateX(20px);
+        }
+
+        .animation-label {
+            display: flex;
+            flex-direction: row;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px;
+            }
+            .color-swatch {
+                margin-right: -5px;
+                width: 25px;
+                height: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Open & Close Container -->
+    <div class="container" id="container-1">
+        <div class="form-body">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggle-main">
+                <span class="slider"></span>
+            </label>
+            <span class="status-text">Open & Close</span>
+        </div>
+        <div class="hidden-content" id="hidden-content">
+            <div class="text-left">
+                <label>Open Time:</label>
+                <input type="time" class="time-input" id="open-time">
+            </div>
+            <div class="text-left">
+                <label>Close Time:</label>
+                <input type="time" class="time-input" id="close-time">
+            </div>
+        </div>
+    </div>
+
+    <!-- Text Container -->
+    <div class="container" id="container-2">
+        <div class="form-body">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggle-text">
+                <span class="slider"></span>
+            </label>
+            <span class="status-text">Text</span>
+        </div>
+        <div class="hidden-content" id="hidden-content-text">
+            <div class="text-left">
+                <label>Text:</label>
+                <textarea class="textarea" id="textarea" placeholder="Enter text"></textarea>
+                <div id="warning" class="textarea-warning"></div>
+            </div>
+            <div class="text-left swipe-orientation-label">
+                <label>Swipe Orientation:</label>
+                <label class="swipe-orientation-toggle">
+                    <input type="checkbox" id="swipe-orientation-toggle">
+                    <span class="swipe-slider"></span>
+                </label>
+                <span id="swipe-orientation-status" class="swipe-orientation-status">Left</span>
+            </div>
+            <div class="text-left">
+                <label>Color Swatches:</label>
+                <div class="color-row">
+                    <div class="color-swatch" style="background-color: #ff0000;" data-color="#ff0000"></div>
+                    <div class="color-swatch" style="background-color: #00ff00;" data-color="#00ff00"></div>
+                    <div class="color-swatch" style="background-color: #0000ff;" data-color="#0000ff"></div>
+                    <div class="color-swatch" style="background-color: #00ffff;" data-color="#00ffff"></div>
+                    <div class="color-swatch" style="background-color: #ff00ff;" data-color="#ff00ff"></div>
+                    <div class="color-swatch" style="background-color: #ffa500;" data-color="#ffa500"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Animation Container -->
+    <div class="container" id="container-3">
+        <div class="form-body">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggle-animation">
+                <span class="slider"></span>
+            </label>
+            <span class="status-text">Animations</span>
+        </div>
+        <div class="hidden-content" id="hidden-content-animation">
+            <div class="text-left">
+                <label style="margin-bottom: 4px;">Animations:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="animation" value="1">Animation 1</label>
+                    <label><input type="checkbox" name="animation" value="2">Animation 2</label>
+                    <label><input type="checkbox" name="animation" value="3">Animation 3</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="button-container">
+        <button class="edit-button">Edit</button>
+    </div>
+
+    <script>
+        const websocket = new WebSocket("ws://" + window.location.host + "/ws"); 
+        
+        websocket.onopen = () => { console.log("WebSocket Connected."); };
+
+        websocket.onerror = (error) => { console.error("WebSocket Error : ", error); };
+
+        websocket.onclose = () => { console.log("WebSocket connection closed."); };
+
+        function updateVisibility(toggle_bool, container, hiddenContent) {
+            if (toggle_bool == true) {
+                container.style.height = 'auto';
+                hiddenContent.classList.add('active');
+            } else {
+                container.style.height = '80px';
+                hiddenContent.classList.remove('active');
+            }
+        }
+
+        websocket.addEventListener('message', (event) => {
+            if (event.data === "REFRESH") {
+                websocket.close();
+                location.reload(); // Refresh the page
+            } else {
+                const config = JSON.parse(event.data);
+                document.getElementById('toggle-main').checked = config.optionOpenClose;
+                document.getElementById('open-time').value = `${String(config.configOpenClose.openTime.hour).padStart(2, '0')}:${String(config.configOpenClose.openTime.minute).padStart(2, '0')}`;
+                document.getElementById('close-time').value = `${String(config.configOpenClose.closeTime.hour).padStart(2, '0')}:${String(config.configOpenClose.closeTime.minute).padStart(2, '0')}`;            
+                document.getElementById('toggle-text').checked = config.optionText;
+                document.getElementById('textarea').value = config.configText.text;
+                document.getElementById('swipe-orientation-toggle').checked = config.configText.swipe === 'R';
+                document.getElementById('swipe-orientation-status').textContent = config.configText.swipe === 'R' ? 'Right' : 'Left';
+                const colorSwatchesS = document.querySelectorAll('.color-swatch');
+                colorSwatchesS.forEach(swatch => {
+                    if (swatch.dataset.color === config.configText.color) {
+                        swatch.classList.add('selected');
+                    } else {
+                        swatch.classList.remove('selected');
+                    }
+                });
+                document.getElementById('toggle-animation').checked = config.optionAnimation;
+                const animationCheckBoxes = document.querySelectorAll('.checkbox-group input[name="animation"]');
+                animationCheckBoxes.forEach(checkbox => {
+                    checkbox.checked = checkbox.value === config.configAnimation.animation;
+                });
+
+                // Initial check on page load
+                updateVisibility(config.optionOpenClose, container, hiddenContent);
+                updateVisibility(config.optionText, containerText, hiddenContentText);
+                updateVisibility(config.optionAnimation, containerAnimation, hiddenContentAnimation);
+            }
+        });
+
+        document.querySelector('.edit-button').addEventListener('click', () => {
+        const currentTime = new Date();
+        const jsonData = {
+            time: {
+                year: currentTime.getFullYear(),
+                month: currentTime.getMonth() + 1,
+                date: currentTime.getDate(),
+                hour: currentTime.getHours(),
+                minute: currentTime.getMinutes(),
+                second: currentTime.getSeconds(),
+            },
+            optionOpenClose: document.getElementById('toggle-main').checked,
+            configOpenClose: {
+                openTime: {
+                    hour: parseInt(document.getElementById('open-time').value.split(':')[0] || 0),
+                    minute: parseInt(document.getElementById('open-time').value.split(':')[1] || 0),
+                },
+                closeTime: {
+                    hour: parseInt(document.getElementById('close-time').value.split(':')[0] || 0),
+                    minute: parseInt(document.getElementById('close-time').value.split(':')[1] || 0),
+                },
+            },
+            optionText: document.getElementById('toggle-text').checked,
+            configText: {
+                text: document.getElementById('textarea').value,
+                swipe: document.getElementById('swipe-orientation-toggle').checked ? 'R' : 'L',
+                color: document.querySelector('.color-swatch.selected')?.dataset.color || '#000000',
+            },
+            optionAnimation: document.getElementById('toggle-animation').checked,
+            configAnimation: {
+                animation: document.querySelector('.checkbox-group input[name="animation"]:checked')?.value || 'A',
+            },
+        };
+
+        if (websocket.readyState === WebSocket.OPEN) {
+            websocket.send(JSON.stringify(jsonData));
+            console.log("JSON sent to ESP32:", jsonData);
+        } else {
+            console.error("WebSocket connection is not open.");
+        }
+        });
+
+        const toggleMain = document.getElementById('toggle-main');
+        const container = document.getElementById('container-1');
+        const hiddenContent = document.getElementById('hidden-content');
+
+        const toggleText = document.getElementById('toggle-text');
+        const containerText = document.getElementById('container-2');
+        const hiddenContentText = document.getElementById('hidden-content-text');
+
+        const toggleAnimation = document.getElementById('toggle-animation');
+        const containerAnimation = document.getElementById('container-3');
+        const hiddenContentAnimation = document.getElementById('hidden-content-animation');
+
+        // Add event listeners for changes
+        toggleMain.addEventListener('change', () => updateVisibility(toggleMain.checked, container, hiddenContent));
+        toggleText.addEventListener('change', () => updateVisibility(toggleText.checked, containerText, hiddenContentText));
+        toggleAnimation.addEventListener('change', () => updateVisibility(toggleAnimation.checked, containerAnimation, hiddenContentAnimation));
+
+        // Textarea input warning
+        const textarea = document.getElementById('textarea');
+        const warning = document.getElementById('warning');
+
+        textarea.addEventListener('input', () => {
+            if (textarea.value.length > 200) {
+                warning.textContent = 'Warning: You have exceeded 200 characters!';
+            } else {
+                warning.textContent = '';
+            }
+        });
+
+        const swipeToggle = document.getElementById('swipe-orientation-toggle');
+        const swipeStatus = document.getElementById('swipe-orientation-status');
+
+        function updateSwipeColor(toggle, status) {
+            if (toggle.checked) {
+                status.classList.add('light-blue');
+                status.classList.remove('whiteish-yellow');
+                status.textContent = 'Right';
+            } else {
+                status.classList.add('whiteish-yellow');
+                status.classList.remove('light-blue');
+                status.textContent = 'Left';
+            }
+        }
+        updateSwipeColor(swipeToggle, swipeStatus);
+        swipeToggle.addEventListener('change', () => updateSwipeColor(swipeToggle, swipeStatus));
+
+        // Color Swatches
+        const colorSwatches = document.querySelectorAll('.color-swatch');
+
+        colorSwatches.forEach(swatch => {
+            swatch.addEventListener('click', () => {
+                colorSwatches.forEach(s => s.classList.remove('selected'));
+                swatch.classList.add('selected');
+            });
+        });
+
+        // Animation Container - Ensure only one checkbox is selectable at a time
+        const animationCheckboxes = document.querySelectorAll('.checkbox-group input[name="animation"]');
+
+        animationCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    // Uncheck all other checkboxes
+                    animationCheckboxes.forEach(otherCheckbox => {
+                        if (otherCheckbox !== checkbox) {
+                        otherCheckbox.checked = false;
+                        }
+                    });
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+#include <Servo.h>
+#include <EEPROM.h>
+#include <LiquidCrystal_I2C.h>
+#include <HX711.h>
+
+HX711 scale;
+
+// EMOT SEGITIKA KIRI <
+uint8_t segitiga_kiri[8] = {
+  0b00000,
+  0b00001,
+  0b00011,
+  0b00111,
+  0b01111,
+  0b00111,
+  0b00011,
+  0b00001
+};
+
+// EMOT SEGITIGA KANAN >
+uint8_t segitiga_kanan[8] = {
+  0b00000,
+  0b10000,
+  0b11000,
+  0b11100,
+  0b11110,
+  0b11100,
+  0b11000,
+  0b10000
+};
+
+//  Nilai rentang analog untuk tiap-tiap tombol
+const int KIRI_MIN = 1005;
+const int KIRI_MAX = 1025;
+const int OK_MIN = 245;
+const int OK_MAX = 265;
+const int KANAN_MIN = 100;
+const int KANAN_MAX = 120;
+
+// Nilai default
+const int seratusMs = 100;
+const int timeOut = 10000;
+const int eepromAddressBerat = 0;
+float rasio_makanan_habis = 0.8; // 0.0 - 1, 0 = 0%, 1.0 = 100%
+float berat = 0.0; // gram
+int delay_proses = 10; // sekon atau detik
+
+// Ukuran LCD
+const int LCD_KOLOM = 16;
+const int LCD_BARIS = 2;
+
+// Flag tambahan untuk komparator
+unsigned long waktuMulai = 0;
+unsigned long waktuTekanTombolOK = 0;
+bool tombolKIRIDitekan = false;
+bool tombolOKDitekan = false;
+bool tombolKANANDitekan = false;
+bool rubahNilai = false;
+bool diatasBatas = false;
+
+// Pin-pin perangkat
+const int buttonPin = A0;
+const int doutPin = 2;
+const int sclPin = 3;
+// const int sda = 4;
+// const int scl = 5;
+const int buzzerPin = 8;
+const int servoPin = 9;
+
+// Mendeklarasikan objek LCD
+LiquidCrystal_I2C lcd(0x27, LCD_KOLOM, LCD_BARIS);
+
+// Mendeklarasikan objek Servo
+Servo servo;
+
+void setup() {
+  scale.begin(doutPin, sclPin);
+  pinMode(buttonPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  servo.attach(servoPin);
+  
+  servo.write(0);
+  
+  EEPROM.get(eepromAddressBerat, berat);
+
+  lcd.init();
+  lcd.backlight();
+  
+  scale.set_scale(1005);
+  scale.tare();
+
+  lcd.createChar(1, segitiga_kiri);
+  lcd.createChar(2, segitiga_kanan);
+  
+  delay(500);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("AUTO PET FEEDER!");
+  lcd.setCursor(0, 1);
+  lcd.print("   KELOMPOK 1   ");
+  
+  delay(1500);
+  lcd.clear();
+  
+  delay(500);
+  lcd.setCursor(0, 0);
+  lcd.print("    berat(g)    ");
+  lcd.setCursor(6,1);
+  lcd.print(berat);
+  lcd.print("g");
+}
+
+void loop() {
+  // Membaca nilai tombol
+  int nilaiTombol = analogRead(A0);
+  
+  // Membaca nilai berat
+  float beratTerbaca = scale.get_units();
+  
+  // Mengecek apakah berat pakan yang terbaca lebih kecil dari takaran porsinya
+  // Jika iya maka servo akan membuka tutup penyimpanan pakan dan menyalakan buzzer
+  // Jika tidak maka servo akan menutup tutup penyimpanan pakan dan mematikan buzzer
+  if (beratTerbaca <= berat * rasio_makanan_habis) {
+    if (!diatasBatas) {
+      waktuMulai = millis();
+      diatasBatas = true;
+    }
+    else if (millis() - waktuMulai >= timeOut) {
+      servo.write(180);
+      tone(buzzerPin, 2000);
+      delay(200);
+      noTone(buzzerPin);
+      delay(200);
+    }
+  }
+  else {
+  	diatasBatas = false;
+    noTone(buzzerPin);
+    servo.write(0);
+  }
+  
+  // Membuka atau menutup menu untuk mengedit nilai berat dengan menahan tombol tengah selama 100 ms
+  if (nilaiTombol >= OK_MIN && nilaiTombol <= OK_MAX) {
+    if (!tombolOKDitekan) {
+      waktuTekanTombolOK = millis();
+      tombolOKDitekan = true;
+    }
+    
+    if (millis() - waktuTekanTombolOK >= seratusMs) {
+      rubahNilai = !rubahNilai;
+      delay(1000);
+      tombolOKDitekan = false;
+      lcd.clear();
+    }
+  } 
+  else {
+  	tombolOKDitekan = false;
+  }
+  
+  // Menu untuk merubah nilai
+  if (rubahNilai == true) {
+    lcd.setCursor(0, 0);
+    lcd.print(" berat pakan(g) ");
+    lcd.setCursor(0, 1);
+    lcd.print("\x1");
+    lcd.setCursor(6, 1);
+    lcd.print(berat);
+    lcd.print("g");
+    
+    // Mengubah nilai berat dengan menekan tombol kiri atau kanan
+    if (nilaiTombol >= KIRI_MIN && nilaiTombol <= KIRI_MAX) {
+      if (!tombolKIRIDitekan) {
+        tombolKIRIDitekan = true;
+        
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print(" berat pakan(g) ");
+        lcd.setCursor(0, 1);
+        lcd.print("\x1");
+        lcd.setCursor(6, 1);
+        lcd.print(berat);
+        lcd.print("g");
+        
+        berat -= 1;
+      }
+    }
+    else {
+      tombolKIRIDitekan = false;
+      
+      lcd.setCursor(0, 0);
+      lcd.print(" berat pakan(g) ");
+      lcd.setCursor(0, 1);
+      lcd.print("\x1");
+      lcd.setCursor(6, 1);
+      lcd.print(berat);
+      lcd.print("g");
+      lcd.setCursor(15, 1);
+      lcd.print("\x2");
+    }
+    
+    if (nilaiTombol >= KANAN_MIN && nilaiTombol <= KANAN_MAX) {
+      if (!tombolKANANDitekan) {
+        tombolKANANDitekan = true;
+        
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print(" berat pakan(g) ");
+        lcd.setCursor(0, 1);
+        lcd.print("\x1");
+        lcd.setCursor(6, 1);
+        lcd.print(berat);
+        lcd.print("g");
+      
+        berat += 1;
+      }
+    } 
+    else {
+      tombolKANANDitekan = false;
+      
+      lcd.setCursor(0, 0);
+      lcd.print(" berat pakan(g) ");
+      lcd.setCursor(0, 1);
+      lcd.print("\x1");
+      lcd.setCursor(6, 1);
+      lcd.print(berat);
+      lcd.print("g");
+      lcd.setCursor(15, 1);
+      lcd.print("\x2");
+    }
+  }
+  else {
+    // Kembali ke semula
+    lcd.setCursor(0, 0);
+    lcd.print("    berat(g)    ");
+    lcd.setCursor(6,1);
+    lcd.print(beratTerbaca);
+    lcd.print("g");
+
+    EEPROM.put(eepromAddressBerat, berat);
+  } 
+}

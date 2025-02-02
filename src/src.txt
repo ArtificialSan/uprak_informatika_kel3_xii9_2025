@@ -1,0 +1,94 @@
+#include <Arduino.h>
+#include <SPIFFS.h>
+#include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
+#include <AnimatedGIF.h>
+
+#define MATRIX_WIDTH 64
+#define MATRIX_HEIGHT 32
+
+MatrixPanel_I2S_DMA *dma_display = nullptr;
+AnimatedGIF gif;
+File gifFile;
+
+uint16_t *framebuffer1;
+uint16_t *framebuffer2;
+uint16_t *currentFramebuffer;
+uint16_t *nextFramebuffer;
+
+void GIFDraw(GIFDRAW *pDraw) {
+  uint8_t *s = pDraw->pPixels;
+  uint16_t *d = currentFramebuffer + pDraw->iY * MATRIX_WIDTH + pDraw->iX;
+  for (int x = 0; x < pDraw->iWidth; x++) {
+    uint8_t r = *s++;
+    uint8_t g = *s++;
+    uint8_t b = *s++;
+    *d++ = dma_display->color565(r, g, b);
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  if (!SPIFFS.begin()) {
+    Serial.println("SPIFFS Mount Failed");
+    return;
+  }
+
+  HUB75_I2S_CFG mxconfig(
+    MATRIX_WIDTH,   // module width
+    MATRIX_HEIGHT,  // module height
+    1               // chain length
+  );
+
+  dma_display = new MatrixPanel_I2S_DMA(mxconfig);
+  dma_display->begin();
+  dma_display->setBrightness8(128);
+
+  framebuffer1 = (uint16_t *)malloc(MATRIX_WIDTH * MATRIX_HEIGHT * sizeof(uint16_t));
+  framebuffer2 = (uint16_t *)malloc(MATRIX_WIDTH * MATRIX_HEIGHT * sizeof(uint16_t));
+  currentFramebuffer = framebuffer1;
+  nextFramebuffer = framebuffer2;
+
+  gif.begin(LITTLE_ENDIAN_PIXELS);
+  gif.open("/nyan-cat-64x32px.gif", GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw);
+}
+
+void loop() {
+  if (gif.playFrame(true, NULL)) {
+    dma_display->flipDMABuffer();
+    uint16_t *temp = currentFramebuffer;
+    currentFramebuffer = nextFramebuffer;
+    nextFramebuffer = temp;
+  } else {
+    gif.reset();
+  }
+}
+
+bool GIFOpenFile(const char *fname, int32_t *pSize) {
+  gifFile = SPIFFS.open(fname);
+  if (!gifFile) {
+    return false;
+  }
+  *pSize = gifFile.size();
+  return true;
+}
+
+void GIFCloseFile() {
+  if (gifFile) {
+    gifFile.close();
+  }
+}
+
+int32_t GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
+  if (!gifFile) {
+    return 0;
+  }
+  return gifFile.read(pBuf, iLen);
+}
+
+int32_t GIFSeekFile(GIFFILE *pFile, int32_t iPosition) {
+  if (!gifFile) {
+    return 0;
+  }
+  gifFile.seek(iPosition);
+  return iPosition;
+}
